@@ -14,7 +14,7 @@
 
 | 인물 | 한국어 설명 | 프롬프트용 앵커 |
 |---|---|---|
-| 원님 | 30대 초반, 마른 얼굴, 단정한 수염, 침착한 눈빛, 남색 단령에 흑사모 | `a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a round rank badge on the chest and a black winged samo hat` |
+| 원님 | 30대 초반, 마른 얼굴, 단정한 수염, 침착한 눈빛, 남색 단령에 흑사모 | `a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a square embroidered crane rank badge (hyungbae) on the chest and a black winged samo hat` |
 | 호랑이 | 크고 늙은 수컷 백두산 호랑이, 왼쪽 귀에 찢긴 흉터 | `a huge old Korean Siberian tiger with thick orange and black fur and a torn scar on its left ear` |
 | 이방 | 50대, 살찐 얼굴, 가는 눈, 회색 도포, 갓 | `a plump Korean clerk in his 50s with narrow cunning eyes, wearing a grey robe and a black gat hat` |
 | 사냥꾼 | 40대, 거친 수염, 털조끼, 활 | `a rugged Korean hunter in his 40s with a rough beard, a fur vest, carrying a bow` |
@@ -32,7 +32,7 @@ Vertical 9:16 photorealistic still frame from a Korean historical drama, Joseon 
 Scene: the stone courtyard of a Joseon county government office (gwana), a wooden hall with a raised floor in the background, villagers in white hanbok holding torches on both sides.
 Center: a huge old Korean Siberian tiger with thick orange and black fur and a torn scar on its left ear, bound with thick ropes, lying low on the stone ground, its eyes calm, not aggressive.
 Beside it, a rugged Korean hunter in his 40s with a rough beard, a fur vest, carrying a bow, pointing at the tiger.
-Background, on the raised hall, seated: a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a round rank badge on the chest and a black winged samo hat. His face is clearly visible, looking down at the tiger with a serious expression.
+Background, on the raised hall, seated: a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a square embroidered crane rank badge (hyungbae) on the chest and a black winged samo hat. His face is clearly visible, looking down at the tiger with a serious expression.
 Composition: low-angle wide shot from behind the tiger's shoulder, tiger in the foreground, magistrate centered above. The moment right before the crowd starts shouting.
 No text, no subtitles, no logos, no watermark.
 ```
@@ -45,7 +45,7 @@ Setting: the stone courtyard of a Joseon county government office before dawn, t
 Characters:
 - Tiger: a huge old Korean Siberian tiger with thick orange and black fur and a torn scar on its left ear, bound with thick ropes.
 - Hunter: a rugged Korean hunter in his 40s with a rough beard, a fur vest, carrying a bow.
-- Magistrate: a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a round rank badge and a black winged samo hat, seated on the raised hall.
+- Magistrate: a Korean magistrate of the Joseon dynasty in his early 30s, lean face, neat short beard, calm sharp eyes, wearing a deep navy official robe (dallyeong) with a square crane rank badge and a black winged samo hat, seated on the raised hall.
 
 [0-4s] The hunter steps forward and shouts toward the hall. The tiger stays low and still. Camera: static low angle.
 The hunter shouts in Korean, furious: "사또! 이놈이 아이들을 물어 갔습니다!"

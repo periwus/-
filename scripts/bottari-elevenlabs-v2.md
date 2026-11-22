@@ -114,3 +114,62 @@ A Korean man in his early 50s, native Korean speaker with a standard Seoul accen
 ## 4. 영상과 맞추는 법
 - **이미 만든 영상이 있으면:** 영상 소리를 끄고 일레븐랩스 대사를 얹습니다. 대사 길이가 영상 속 입 움직임과 비슷하면 그대로 쓰고, 많이 어긋나는 컷만 립싱크 도구로 맞춥니다.
 - **앞으로 만들 영상:** 영상 프롬프트의 대사 부분은 그대로 둡니다. 입 모양이 대사에 맞게 움직여야 나중에 목소리만 바꿔도 덜 어색합니다.
+
+## 5. 캐릭터별 대사 모음
+캐릭터 목소리 하나를 골라 둔 상태에서 그 사람 대사를 한 줄씩 넣어 만들면 됩니다. 파일명은 줄 앞의 컷 번호를 씁니다. 예: `C02_순자.mp3`
+
+### 순자 (10줄)
+```
+C02 [warmly] 김밥이야. 사돈어른들 드시라고.
+C07 [modestly] 저는 시장에서…
+C12 [calmly] 마음 써 주셔서 고맙네요.
+C14 [a little shy] 응. 식었지?
+C25 [plainly, calm] 네. 국밥 팔아서 번 돈이에요.
+C27 [politely but firmly] 그 얘기는 회사에서 하시죠.
+C28 [pause] [softly, warm] 오늘은 애들 보러 왔어요.
+C30 [quietly, no blame] 아까도 말하려는데 네가 못 하게 하더라.
+C32 [warmly] 그럼.
+C34 [lightly, everyday motherly tone] 기울이지 마. 김밥 쏟아진다.
+```
+
+### 민호 (6줄)
+```
+C01 [irritated, under breath] 엄마, 그 보따리 차에 두고 오라니까요.
+C03 [embarrassed, whispering] 여기 호텔이에요. 창피하게 진짜.
+C08 [quickly, cutting in] 작은 가게 하세요. 지금은 거의 쉬시고요.
+C23 [stunned whisper] 엄마가?
+C29 [hesitant] 엄마, 나한테는 왜…
+C33 [quietly, sincere] …엄마, 내가 들게.
+```
+
+### 지은 (4줄)
+```
+C04 [kindly] 어머님, 여기 두세요.
+C13 [curious, warm] 어머님, 아침에 싸 오신 거예요?
+C15 [mouth half full, bright] 아니요. 저 아침도 못 먹었어요.
+C31 [gently, a little shy] 어머님, 이거 제가 가져가도 되죠?
+```
+
+### 정숙 (7줄)
+```
+C05 [politely, condescending] 어머, 직접 싸 오셨어요? 여기 음식 다 나오는데.
+C06 [casually] 어머님은 무슨 일 하세요?
+C10 [pitying] 아, 장사하셨구나.
+C11 [sweetly] 예단은 하지 마세요. 형편에 무리하실 것 없잖아요.
+C17 [scolding, low voice] 지은아, 손으로 그게 뭐니.
+C19 [eager] 만났어요?
+C24 [flustered, trailing off] 시장에 가게 하신다고…
+```
+
+### 강 회장 (4줄)
+```
+C18 [slightly out of breath] 늦었습니다. 이 호텔 대표님 뵙기로 해서요.
+C20 [tense, low] 아직. 오늘은 꼭 뵈어야 하는데.
+C22 [stunned] …대표님이세요?
+C26 [nervous] 투자 건은 제가 따로…
+```
+
+### 박 지배인 (1줄)
+```
+C21 [respectfully] 대표님, 말씀하신 차 준비됐습니다.
+```

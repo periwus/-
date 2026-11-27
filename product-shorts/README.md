@@ -51,6 +51,7 @@ python shorts.py examples/product.json --bgm music.mp3 --voice injoon --rate "+2
 | `<상품명>.mp4` | 1080×1920, 30fps 완성 영상 (보통 25~40초) |
 | `thumbnail.jpg` | 후킹 문구가 들어간 썸네일 |
 | `upload.txt` | 제목, 설명, 해시태그, 고정 댓글 (쿠팡 링크면 **파트너스 고지 문구 자동 삽입**) |
+| `upload.json` | 유튜브 자동 업로드에 쓰는 정보 |
 | `script.json` | 장면별 대본. 고친 뒤 `--script`로 다시 렌더링할 수 있습니다 |
 
 ### 대본 고쳐서 다시 만들기
@@ -98,6 +99,52 @@ python shorts.py examples/product.json --style "20대 친구한테 말하듯, �
 | `--tts none` | 음성 없이 자막만 (테스트용) |
 | `--font` | 자막 폰트 직접 지정 (.ttf) |
 | `-o` | 결과 폴더 |
+| `--upload` | 만든 뒤 바로 유튜브 업로드 (아래 업로드 옵션 모두 사용 가능) |
+
+## 유튜브 자동 업로드
+
+### 1. 처음 한 번만: 업로드 권한 준비 (약 10분)
+1. [Google Cloud 콘솔](https://console.cloud.google.com/)에서 새 프로젝트를 만듭니다.
+2. **API 및 서비스 → 라이브러리**에서 `YouTube Data API v3`를 찾아 **사용**을 누릅니다.
+3. **OAuth 동의 화면**: 유형은 *외부*, 앱 이름과 이메일을 넣고, **테스트 사용자**에 업로드할 유튜브 채널의 구글 계정을 추가합니다.
+4. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID**에서 유형을 **데스크톱 앱**으로 고릅니다. 만든 뒤 JSON을 내려받아 `product-shorts/client_secret.json`으로 저장합니다.
+5. 처음 업로드할 때 브라우저가 열리면 채널 계정으로 로그인해 허용합니다. 그 뒤로는 `token.json`이 저장돼 자동으로 로그인됩니다.
+
+> `client_secret.json`과 `token.json`은 비밀번호와 같습니다. `.gitignore`에 들어 있으니 깃허브나 남에게 올리지 마세요.
+
+### 2. 업로드하기
+```bash
+# 만들고 바로 업로드 (기본: 비공개)
+python shorts.py examples/products.csv --upload
+
+# 이미 만든 영상 올리기 (output 안에서 아직 안 올린 것만)
+python upload.py output
+
+# 12/1 저녁 6시부터 3시간 간격으로 예약 공개
+python upload.py output --publish-at "2026-12-01 18:00" --interval 3h
+
+# 바로 전체 공개
+python upload.py output --privacy public
+```
+
+자동으로 처리되는 것:
+- 제목에 `#shorts` 추가, 설명란(구매 링크, 파트너스 고지, 해시태그), 태그, 아동용 아님 설정
+- 쿠팡 링크면 **'유료 광고 포함'** 표시 (`--no-paid-promo`로 끌 수 있음)
+- 구매 링크 **댓글 작성**. API로는 댓글을 고정할 수 없어서, Studio에서 **고정**을 눌러야 합니다.
+- 올린 영상은 `upload_result.json`에 기록돼서 다시 실행해도 **중복 업로드되지 않습니다**.
+
+비공개·예약 영상에는 댓글이 안 달릴 수 있습니다. 공개된 뒤에 아래 명령으로 링크 댓글만 다시 달면 됩니다.
+```bash
+python upload.py output --comments-only
+```
+
+### 꼭 알아둘 제한
+- **감사(audit) 전에는 비공개로만 올라갑니다.** 2020년 7월 28일 이후 만든 API 프로젝트는 Google의 검토를 통과하기 전까지 업로드한 영상이 모두 비공개로 고정됩니다. `--privacy public`이나 예약을 해도 마찬가지입니다. 방법은 두 가지입니다.
+  - Studio에서 직접 공개로 바꾸기 (업로드까지는 자동)
+  - [YouTube API 감사·할당량 신청서](https://support.google.com/youtube/contact/yt_api_form)를 제출해 검토 받기
+- **하루 업로드 개수 제한(할당량)**: 프로젝트마다 하루 사용량이 정해져 있습니다. 현재 값은 Google Cloud 콘솔의 **API → 할당량** 화면에서 확인하세요. 초과하면 프로그램이 멈추고, 다음 날 다시 실행하면 남은 영상만 올라갑니다.
+- **썸네일**: `--thumbnail`로 올릴 수 있지만 채널 인증(전화번호)이 필요하고, 쇼츠 피드에서는 안 보일 수 있습니다.
+- **같은 영상을 너무 많이 올리면** 스팸 정책에 걸릴 수 있습니다. 상품마다 대본과 이미지를 다르게 하세요.
 
 ## 주의사항
 
@@ -112,17 +159,19 @@ python shorts.py examples/product.json --style "20대 친구한테 말하듯, �
 ```
 product-shorts/
 ├── shorts.py              # 실행 파일 (CLI)
+├── upload.py              # 만든 영상 유튜브 업로드
 ├── shortsmaker/
 │   ├── product.py         # JSON/CSV/URL 상품 불러오기
 │   ├── script.py          # 대본 생성 (템플릿 + Claude)
 │   ├── tts.py             # edge-tts 음성
 │   ├── render.py          # 장면 그리기, 자막, ffmpeg 합성
 │   ├── pipeline.py        # 전체 흐름, 썸네일, 업로드 문구
+│   ├── youtube.py         # 유튜브 업로드 (OAuth, 예약, 댓글)
 │   └── fonts.py           # 한글 폰트 자동 준비
 └── examples/              # 예시 상품 + 샘플 이미지
 ```
 
 ## 다음에 붙이면 좋은 것
-- 유튜브 업로드 API로 자동 업로드 (OAuth 설정 필요)
+- 인스타그램 릴스 / 틱톡 업로드
 - 상품 영상 클립(mp4) 입력 지원
 - 단어 단위 자막 싱크 (edge-tts WordBoundary 활용)

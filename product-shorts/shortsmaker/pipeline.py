@@ -19,6 +19,30 @@ def slug(s: str) -> str:
     return s[:40] or "product"
 
 
+def pinned_comment(p: Product) -> str:
+    pin = f"👉 {p.name} 구매 링크: {p.link}" if p.link else f"👉 {p.name} 정보는 프로필 링크에서!"
+    if p.is_affiliate:
+        pin += f"\n({COUPANG_NOTICE})"
+    return pin
+
+
+def full_description(p: Product, s: Script) -> str:
+    lines = [s.description.strip()]
+    if p.link:
+        lines += ["", f"👉 구매 링크: {p.link}"]
+    if p.is_affiliate:
+        lines += ["", COUPANG_NOTICE]
+    lines += ["", " ".join(s.hashtags)]
+    return "\n".join(lines)
+
+
+def upload_meta(p: Product, s: Script, video: Path) -> dict:
+    """upload.py가 읽는 업로드 정보."""
+    return {"title": s.title, "description": full_description(p, s), "tags": s.hashtags,
+            "pinned_comment": pinned_comment(p), "affiliate": p.is_affiliate,
+            "video": video.name, "thumbnail": "thumbnail.jpg"}
+
+
 def upload_text(p: Product, s: Script) -> str:
     desc = s.description.strip()
     lines = [f"[제목]\n{s.title}", "", "[설명]", desc]
@@ -97,6 +121,8 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
     thumb.convert("RGB").save(out / "thumbnail.jpg", quality=92)
 
     (out / "upload.txt").write_text(upload_text(p, script), encoding="utf-8")
+    (out / "upload.json").write_text(json.dumps(upload_meta(p, script, video), ensure_ascii=False, indent=2),
+                                     encoding="utf-8")
     print(f"  ✔ {video}  ({total:.1f}초{'' if voiced else ', 무음: TTS 연결 실패'})")
     if total > 60:
         print("  ! 60초를 넘었습니다. 쇼츠는 짧을수록 유리하니 기능 수를 줄여보세요.")

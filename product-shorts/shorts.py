@@ -6,6 +6,7 @@
   python shorts.py examples/products.csv --bgm music.mp3
   python shorts.py --url "https://상품페이지" --name "이름 덮어쓰기"
   python shorts.py examples/product.json --script output/xxx/script.json   # 대본 수정 후 재렌더
+  python shorts.py examples/products.csv --upload --publish-at "2026-12-01 18:00"  # 만들고 예약 업로드
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from shortsmaker import fonts
+from shortsmaker import fonts, youtube
 from shortsmaker.pipeline import make_short
 from shortsmaker.product import from_url, load_products
 
@@ -38,6 +39,8 @@ def main():
     ap.add_argument("--bgm-volume", type=float, default=0.12)
     ap.add_argument("--font", help="자막 폰트 .ttf 경로")
     ap.add_argument("--script", type=Path, help="수정한 script.json으로 다시 렌더링")
+    ap.add_argument("--upload", action="store_true", help="만든 뒤 바로 유튜브에 업로드 (upload.py와 같은 옵션)")
+    youtube.add_args(ap)
     a = ap.parse_args()
 
     if not shutil.which("ffmpeg"):
@@ -72,6 +75,12 @@ def main():
             print(f"  ✘ {p.name}: {e}")
             failed.append(p.name)
     print(f"\n완료 {len(done)}개, 실패 {len(failed)}개 → {out.resolve()}")
+    if a.upload and done:
+        try:
+            ok, fail = youtube.upload_many([v.parent for v in done], a)
+            print(f"업로드 {ok}개, 실패 {fail}개")
+        except (ValueError, FileNotFoundError) as e:
+            sys.exit(f"업로드 오류: {e}\n(영상은 만들어졌으니 문제를 고친 뒤 'python upload.py {out}' 로 올리면 됩니다)")
     sys.exit(1 if failed and not done else 0)
 
 

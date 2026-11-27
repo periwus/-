@@ -1,0 +1,5 @@
+pillow>=10.0
+requests>=2.31
+beautifulsoup4>=4.12
+edge-tts>=6.1
+anthropic>=2.14   # 선택: ANTHROPIC_API_KEY가 있을 때만 AI 대본 생성에 사용

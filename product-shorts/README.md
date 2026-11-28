@@ -18,6 +18,8 @@
 
 ## 설치
 
+> Windows에서 처음 실행한다면 **[PC_실행가이드.md](PC_실행가이드.md)**를 따라 하세요.
+
 1. Python 3.10 이상
 2. **ffmpeg** 설치 후 PATH에 등록
    - Windows: `winget install ffmpeg`

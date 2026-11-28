@@ -65,6 +65,11 @@ def main():
     out = Path(a.out)
     done, failed = [], []
     for p in products:
+        missing = [k for k, v in (("images", p.images), ("features", p.features)) if not v]
+        if missing:
+            print(f"  - 건너뜀: {p.name} (비어 있음: {', '.join(missing)}) → 실제 상품 정보를 채워 주세요")
+            failed.append(p.name)
+            continue
         try:
             done.append(make_short(
                 p, out, font, ai=a.ai, model=a.model, style=a.style, voice=a.voice, rate=a.rate,

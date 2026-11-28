@@ -101,6 +101,20 @@ python shorts.py examples/product.json --style "20대 친구한테 말하듯, �
 | `-o` | 결과 폴더 |
 | `--upload` | 만든 뒤 바로 유튜브 업로드 (아래 업로드 옵션 모두 사용 가능) |
 
+## 상품 소싱 후보 (sourcing/)
+
+| 파일 | 내용 |
+|---|---|
+| `winter_candidates.csv` | 겨울 시즌 상품 아이디어 25개: 타깃, 불편, 후킹 아이디어, 쿠팡 검색어, 예상 가격대, 주의사항 |
+| `winter_products_template.csv` | 위 후보를 프로그램 입력 형식으로 옮긴 틀 (name, pain, target만 채워짐) |
+
+> 이 목록은 **조회수 데이터로 검증하지 않은 아이디어**입니다. 가격대와 장점도 일반적인 예시라서, 실제 상품 페이지에서 확인한 내용으로 바꿔야 합니다.
+
+사용 순서:
+1. `winter_candidates.csv`의 쿠팡 검색어로 리뷰가 많은 로켓배송 상품을 고릅니다.
+2. 템플릿에 그 상품의 실제 `price`, `features`(상세페이지에 적힌 장점만), `images`, 파트너스 `link`를 채우고, 쓰지 않을 줄은 지웁니다.
+3. `python shorts.py sourcing/winter_products_template.csv` 를 실행합니다. `images`나 `features`가 빈 줄은 자동으로 건너뜁니다.
+
 ## 유튜브 자동 업로드
 
 ### 1. 처음 한 번만: 업로드 권한 준비 (약 10분)

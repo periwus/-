@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--bgm", type=Path, help="배경음악 파일 (저작권 free 음원 권장)")
     ap.add_argument("--bgm-volume", type=float, default=0.12)
     ap.add_argument("--font", help="자막 폰트 .ttf 경로")
+    ap.add_argument("--clip-volume", type=float, default=0.0,
+                    help="상품 영상 클립 원래 소리 크기 (기본 0 = 음소거, 예: 0.3)")
     ap.add_argument("--script", type=Path, help="수정한 script.json으로 다시 렌더링")
     ap.add_argument("--upload", action="store_true", help="만든 뒤 바로 유튜브에 업로드 (upload.py와 같은 옵션)")
     youtube.add_args(ap)
@@ -65,7 +67,7 @@ def main():
     out = Path(a.out)
     done, failed = [], []
     for p in products:
-        missing = [k for k, v in (("images", p.images), ("features", p.features)) if not v]
+        missing = [k for k, v in (("images/clips", p.media), ("features", p.features)) if not v]
         if missing:
             print(f"  - 건너뜀: {p.name} (비어 있음: {', '.join(missing)}) → 실제 상품 정보를 채워 주세요")
             failed.append(p.name)
@@ -73,7 +75,7 @@ def main():
         try:
             done.append(make_short(
                 p, out, font, ai=a.ai, model=a.model, style=a.style, voice=a.voice, rate=a.rate,
-                tts_engine=a.tts, bgm=a.bgm, bgm_volume=a.bgm_volume,
+                tts_engine=a.tts, bgm=a.bgm, bgm_volume=a.bgm_volume, clip_volume=a.clip_volume,
                 script_file=a.script if len(products) == 1 else None,
             ))
         except Exception as e:

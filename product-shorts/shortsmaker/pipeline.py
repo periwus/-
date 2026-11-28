@@ -60,7 +60,7 @@ def upload_text(p: Product, s: Script) -> str:
 
 def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claude-opus-5-5", style="",
                voice="sunhi", rate="+12%", tts_engine="edge", bgm: Path | None = None,
-               bgm_volume=0.12, script_file: Path | None = None) -> Path:
+               bgm_volume=0.12, script_file: Path | None = None, clip_volume: float = 0.0) -> Path:
     out = out_root / slug(p.name)
     work = out / "work"
     work.mkdir(parents=True, exist_ok=True)
@@ -75,7 +75,7 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
     print(f"  · 대본: {src}, 장면 {len(script.scenes)}개")
 
     # 2) 이미지
-    images = render.fetch_images(p.images, work)
+    media = render.fetch_media(p.images, p.clips, work)
     badge_text = None
     dr = p.discount_rate()
     if dr:
@@ -83,10 +83,10 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
 
     parts, total, voiced = [], 0.0, True
     for i, sc in enumerate(script.scenes):
-        im = images[sc.image % len(images)]
-        canvas = work / f"canvas_{sc.image % len(images)}.png"
-        if not canvas.exists():
-            render.scene_canvas(im).save(canvas)
+        m = media[sc.image % len(media)]
+        canvas = work / f"canvas_{sc.image % len(media)}.png"
+        if m.kind == "image" and not canvas.exists():
+            render.scene_canvas(m.image).save(canvas)
 
         # 자막 레이어
         layer = Image.new("RGBA", (render.W, render.H), (0, 0, 0, 0))
@@ -106,7 +106,10 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
         voiced &= ok
         dur += 0.25  # 장면 사이 숨 고르기
         part = work / f"scene_{i}.mp4"
-        render.render_scene(canvas, ov, audio, dur, part, zoom_in=(i % 2 == 0), idx=i)
+        if m.kind == "video":
+            render.render_clip_scene(m, ov, audio, dur, part, clip_volume)
+        else:
+            render.render_scene(canvas, ov, audio, dur, part, zoom_in=(i % 2 == 0), idx=i)
         parts.append(part)
         total += dur
         print(f"  · 장면 {i + 1}/{len(script.scenes)} [{sc.kind}] {dur:.1f}s")
@@ -115,7 +118,7 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
     render.concat(parts, video, bgm, bgm_volume)
 
     # 썸네일
-    thumb = render.scene_canvas(images[0], scale=1).convert("RGBA")
+    thumb = render.scene_canvas(media[0].frame(), scale=1).convert("RGBA")
     first = script.scenes[0].caption
     thumb.alpha_composite(render.caption_png(first, font, 116, 1560))
     thumb.convert("RGB").save(out / "thumbnail.jpg", quality=92)

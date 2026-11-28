@@ -48,7 +48,7 @@ HOOKS = [
 
 def template_script(p: Product, seed: int | None = None) -> Script:
     rnd = random.Random(seed if seed is not None else p.name)
-    n_img = max(1, len(p.images))
+    n_img = max(1, len(p.media))
     pain = p.pain or "매일 하는 이 불편함"
     target = p.target or "자취생"
     hooks = [h for h in HOOKS if ("{price}" not in h or p.price)]
@@ -110,7 +110,8 @@ SYSTEM = """너는 조회수 높은 한국 상품 쇼츠(유튜브 쇼츠·릴�
 - 흐름: hook → problem(선택) → feature(제품 소개+핵심 기능 2~4개) → price(가격이 있으면) → cta.
 - caption은 화면 자막: 12자 안팎 한두 줄, 핵심 단어는 **두 별표**로 감싼다. 할인 전 가격은 ~~물결~~로 감싸면 취소선이 된다. 줄바꿈은 \\n. 이모지·특수기호(✔↓👇 등)는 쓰지 마라.
 - 상품 정보에 없는 효능·수치·후기·인증을 지어내지 마라. 과장 광고 표현(최고, 100%, 완치 등) 금지.
-- image는 0부터 시작하는 상품 이미지 번호(이미지 개수 미만).
+- image는 0부터 시작하는 소재 번호(media 목록 길이 미만). media에서 "video"는 상품 영상 클립이니
+  후킹·사용 장면에 우선 배치하고, 가격·CTA 장면에는 "image"를 쓰는 편이 좋다.
 - title은 60자 이내 후킹 제목, hashtags는 5~8개(#포함), description은 2~4줄 상품 설명."""
 
 SCHEMA = {
@@ -143,8 +144,8 @@ def ai_script(p: Product, model: str = "claude-opus-5-5", style: str = "") -> Sc
     import anthropic
 
     client = anthropic.Anthropic()
-    info = {k: v for k, v in p.to_dict().items() if k not in ("images", "affiliate") and v}
-    info["image_count"] = max(1, len(p.images))
+    info = {k: v for k, v in p.to_dict().items() if k not in ("images", "clips", "affiliate") and v}
+    info["media"] = ["video" if i < len(p.clips) else "image" for i in range(max(1, len(p.media)))]
     prompt = "다음 상품으로 쇼츠 대본을 써줘.\n" + json.dumps(info, ensure_ascii=False, indent=2)
     if style:
         prompt += f"\n\n추가 요청: {style}"
@@ -161,7 +162,7 @@ def ai_script(p: Product, model: str = "claude-opus-5-5", style: str = "") -> Sc
         raise RuntimeError("Claude가 이 상품 대본 작성을 거절했습니다.")
     text = "".join(b.text for b in resp.content if b.type == "text")
     s = Script.from_dict(json.loads(text))
-    n = max(1, len(p.images))
+    n = max(1, len(p.media))
     for sc in s.scenes:
         sc.image = min(max(sc.image, 0), n - 1)
     return s

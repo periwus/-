@@ -21,6 +21,7 @@ class Product:
     original_price: str = ""        # 할인 전 가격(선택)
     features: list[str] = field(default_factory=list)
     images: list[str] = field(default_factory=list)   # 로컬 경로 또는 URL
+    clips: list[str] = field(default_factory=list)    # 상품 영상 클립 (mp4/mov 등)
     link: str = ""                  # 구매/제휴 링크
     pain: str = ""                  # 고객이 겪는 불편 ("욕실 물때")
     target: str = ""                # 타깃 ("자취생")
@@ -34,6 +35,11 @@ class Product:
             return self.affiliate
         return "coupang" in self.link or "link.coupang" in self.link
 
+    @property
+    def media(self) -> list[str]:
+        """장면에 쓰는 소재 목록. 영상 클립을 앞에 둬서 첫 장면(후킹)이 움직이는 화면이 되게 한다."""
+        return self.clips + self.images
+
     def discount_rate(self) -> int | None:
         p, o = _num(self.price), _num(self.original_price)
         if p and o and o > p:
@@ -42,6 +48,13 @@ class Product:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+VIDEO_EXT = (".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi")
+
+
+def is_video(path: str) -> bool:
+    return path.split("?")[0].lower().endswith(VIDEO_EXT)
 
 
 def _num(s: str) -> int | None:
@@ -59,10 +72,16 @@ def from_dict(d: dict, base_dir: Path | None = None) -> Product:
     known = Product.__dataclass_fields__.keys()
     data = {k: v for k, v in d.items() if k in known}
     data["features"] = _split(d.get("features"))
-    imgs = _split(d.get("images"))
-    if base_dir:
-        imgs = [i if i.startswith("http") or Path(i).is_absolute() else str(base_dir / i) for i in imgs]
-    data["images"] = imgs
+    def resolve(items):
+        if not base_dir:
+            return items
+        return [i if i.startswith("http") or Path(i).is_absolute() else str(base_dir / i) for i in items]
+
+    imgs, clips = resolve(_split(d.get("images"))), resolve(_split(d.get("clips")))
+    # images 칸에 영상 파일을 넣어도 클립으로 인식
+    clips += [i for i in imgs if is_video(i)]
+    data["images"] = [i for i in imgs if not is_video(i)]
+    data["clips"] = clips
     for k in ("price", "original_price"):
         if data.get(k) not in (None, ""):
             n = _num(str(data[k]))

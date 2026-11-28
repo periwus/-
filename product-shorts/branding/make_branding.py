@@ -3,12 +3,16 @@
 
   python branding/make_branding.py
   python branding/make_branding.py --name "살림픽" --slogan "1만원대 생활 꿀템, 30초면 끝" --sub "매일 저녁 7시 새 쇼츠"
+
+ChatGPT 등으로 만든 그림을 유튜브 규격에 맞추기:
+  python branding/make_branding.py --icon-src gpt_icon.png --banner-bg gpt_banner.png            # 크기만 맞춤
+  python branding/make_branding.py --banner-bg gpt_banner.png --banner-text --name "살림픽"       # 한글 이름도 얹기
 """
 import argparse
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shortsmaker.fonts import find_font  # noqa: E402
@@ -66,6 +70,38 @@ def make_icon(name, font_path, out: Path, size=800):
     prev.save(out.with_name(out.stem + "_preview_circle.png"))
 
 
+def fit_icon(src: Path, out: Path, size=800):
+    """정사각형으로 가운데를 잘라 800x800으로 맞춘다."""
+    im = ImageOps.fit(Image.open(src).convert("RGB"), (size, size), Image.LANCZOS)
+    im.save(out, quality=95)
+    prev = im.convert("RGBA")
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, size, size], fill=255)
+    prev.putalpha(mask)
+    prev.save(out.with_name(out.stem + "_preview_circle.png"))
+    small = im.resize((48, 48), Image.LANCZOS).resize((240, 240), Image.NEAREST)
+    small.save(out.with_name(out.stem + "_preview_48px.png"))   # 작게 줄였을 때 알아보는지 확인
+
+
+def fit_banner(src: Path, out: Path, name=None, font_path=None, W=2560, H=1440):
+    """16:9로 가운데를 잘라 2560x1440으로 맞추고, 원하면 한글 채널 이름을 안전 영역에 얹는다."""
+    im = ImageOps.fit(Image.open(src).convert("RGB"), (W, H), Image.LANCZOS, centering=(0.5, 0.5))
+    if name and font_path:
+        d = ImageDraw.Draw(im)
+        f = fit_font(font_path, name, 1546 * 0.5, 423 * 0.45, 260)
+        draw_center(d, W / 2, H / 2, name, f, YELLOW, stroke=10, stroke_fill=NAVY)
+    im.save(out, quality=92)
+    _safe_check(im, out)
+
+
+def _safe_check(im, out, SW=1546, SH=423):
+    W, H = im.size
+    x0, y0 = (W - SW) / 2, (H - SH) / 2
+    chk = im.copy()
+    ImageDraw.Draw(chk).rectangle([x0, y0, x0 + SW, y0 + SH], outline=(0, 255, 120), width=6)
+    chk.resize((1280, 720)).save(out.with_name(out.stem + "_safe_area_check.png"))
+
+
 def make_banner(name, slogan, sub, font_path, out: Path):
     W, H = 2560, 1440
     SW, SH = 1546, 423   # 모든 기기에서 보이는 안전 영역 (가운데)
@@ -102,10 +138,7 @@ def make_banner(name, slogan, sub, font_path, out: Path):
         d.rounded_rectangle([tx, yb, tx + (r3 - l3) + 56, yb + (b3 - t3) + 34], radius=40, fill=RED)
         d.text((tx + 28 - l3, yb + 17 - t3), sub, font=fsub, fill=WHITE)
     im.save(out, quality=92)
-    # 안전 영역 확인용
-    chk = im.copy()
-    ImageDraw.Draw(chk).rectangle([x0, y0, x0 + SW, y0 + SH], outline=(0, 255, 120), width=6)
-    chk.resize((1280, 720)).save(out.with_name(out.stem + "_safe_area_check.png"))
+    _safe_check(im, out)
 
 
 def main():
@@ -114,11 +147,22 @@ def main():
     ap.add_argument("--slogan", default="1만원대 생활 꿀템, 30초면 끝")
     ap.add_argument("--sub", default="매일 저녁 7시 새 쇼츠")
     ap.add_argument("--font")
+    ap.add_argument("--icon-src", type=Path, help="외부(ChatGPT 등) 아이콘 그림 → 800x800으로 맞춤")
+    ap.add_argument("--banner-bg", type=Path, help="외부 배너 그림 → 2560x1440으로 맞춤")
+    ap.add_argument("--banner-text", action="store_true", help="--banner-bg 위에 --name을 한글로 얹기")
     ap.add_argument("-o", "--out", default=str(Path(__file__).resolve().parent / "output"))
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     font = find_font(a.font)
+    if a.icon_src or a.banner_bg:
+        if a.icon_src:
+            fit_icon(a.icon_src, out / "gpt_icon_800.png")
+        if a.banner_bg:
+            fit_banner(a.banner_bg, out / "gpt_banner_2560x1440.jpg",
+                       a.name if a.banner_text else None, font)
+        print(f"완료 → {out}")
+        return
     make_icon(a.name, font, out / "channel_icon_800.png")
     make_banner(a.name, a.slogan, a.sub, font, out / "channel_banner_2560x1440.jpg")
     print(f"완료 → {out}")

@@ -118,7 +118,7 @@ def _insert(yt, body: dict, video: Path):
 
 
 def upload_folder(yt, folder: Path, *, privacy="private", publish_at=None, category="people",
-                  synthetic=False, paid_promo=None, thumbnail=False, comment=True, force=False) -> dict | None:
+                  synthetic=False, paid_promo=None, thumbnail=False, comment=False, force=False) -> dict | None:
     from googleapiclient.errors import HttpError
 
     meta_file, result_file = folder / "upload.json", folder / "upload_result.json"
@@ -209,15 +209,40 @@ def add_args(ap):
     g.add_argument("--synthetic", action="store_true", help="'변경되거나 합성된 콘텐츠' 표시")
     g.add_argument("--no-paid-promo", action="store_true", help="제휴 링크여도 '유료 광고 포함' 표시 안 함")
     g.add_argument("--thumbnail", action="store_true", help="썸네일도 업로드 (채널 인증 필요)")
-    g.add_argument("--no-comment", action="store_true", help="링크 댓글 작성 안 함")
+    g.add_argument("--comment", action="store_true",
+                   help="안내 댓글도 작성 (기본 끔: 쇼츠 댓글 링크는 눌리지 않고 스팸으로 걸러지기 쉬움)")
+    g.add_argument("--expect-channel", default=None,
+                   help="업로드할 채널 ID. 다르면 중단 (기본: channel_id.txt 내용)")
     g.add_argument("--force", action="store_true", help="이미 올린 영상도 다시 업로드")
     g.add_argument("--client-secret", type=Path, default=Path("client_secret.json"))
     g.add_argument("--token", type=Path, default=Path("token.json"))
 
 
+def expected_channel(a) -> str | None:
+    if getattr(a, "expect_channel", None):
+        return a.expect_channel.strip()
+    f = Path(__file__).resolve().parent.parent / "channel_id.txt"
+    if f.exists():
+        return f.read_text(encoding="utf-8").split()[0].strip() or None
+    return None
+
+
+def check_channel(yt, expected: str | None) -> dict:
+    """로그인된 채널을 보여주고, 정해 둔 채널이 아니면 멈춘다 (엉뚱한 채널 업로드 방지)."""
+    items = yt.channels().list(part="snippet", mine=True).execute().get("items", [])
+    if not items:
+        raise ValueError("로그인한 계정에 유튜브 채널이 없습니다. token.json을 지우고 채널이 있는 계정으로 다시 로그인하세요.")
+    ch = {"id": items[0]["id"], "title": items[0]["snippet"]["title"]}
+    print(f"업로드 채널: {ch['title']} ({ch['id']})")
+    if expected and ch["id"] != expected:
+        raise ValueError(f"정해 둔 채널({expected})이 아닙니다. token.json을 지우고 올바른 채널로 다시 로그인하세요.")
+    return ch
+
+
 def upload_many(folders: list[Path], a) -> tuple[int, int]:
     """(새로 올린 수, 실패 수)를 반환. 이미 올린 폴더는 건너뛴다."""
     yt = get_service(a.client_secret, a.token)
+    check_channel(yt, expected_channel(a))
     when = parse_time(a.publish_at) if a.publish_at else None
     if when and when < datetime.now(KST) + timedelta(minutes=15):
         raise ValueError("예약 시각은 지금부터 15분 이후여야 합니다.")
@@ -227,7 +252,7 @@ def upload_many(folders: list[Path], a) -> tuple[int, int]:
         try:
             r = upload_folder(yt, f, privacy=a.privacy, publish_at=when, category=a.category,
                               synthetic=a.synthetic, paid_promo=False if a.no_paid_promo else None,
-                              thumbnail=a.thumbnail, comment=not a.no_comment, force=a.force)
+                              thumbnail=a.thumbnail, comment=a.comment, force=a.force)
             if r and not r.get("skipped"):
                 ok += 1
                 if when and r.get("publish_at"):

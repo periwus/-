@@ -131,16 +131,26 @@ def scene_canvas(im: Image.Image, scale: int = 2) -> Image.Image:
 TOKEN = re.compile(r"(\*\*.+?\*\*|~~.+?~~)")
 
 
-def _segments(line: str):
+# 자막 스타일: 살림픽 채널 디자인(밝은 바탕, 빨간 스티커 글자, 노란 포인트)에 맞춤
+STYLES = {
+    #          상자 색             기본 글자         강조 글자          취소선 글자
+    "light": ((255, 255, 255, 240), (30, 30, 34), (232, 38, 43), (150, 150, 150)),
+    "hook":  ((255, 216, 77, 245), (30, 30, 34), (220, 30, 36), (120, 110, 90)),
+    "dark":  ((0, 0, 0, 150), WHITE, YELLOW, GRAY),          # 예전 스타일
+}
+
+
+def _segments(line: str, style: str = "dark"):
+    _, base, emph, strike = STYLES[style]
     for part in TOKEN.split(line):
         if not part:
             continue
         if part.startswith("**"):
-            yield part[2:-2], YELLOW, False
+            yield part[2:-2], emph, False
         elif part.startswith("~~"):
-            yield part[2:-2], GRAY, True
+            yield part[2:-2], strike, True
         else:
-            yield part, WHITE, False
+            yield part, base, False
 
 
 def _wrap(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
@@ -188,22 +198,30 @@ def clean_caption(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
-def caption_png(text: str, font_path: str, size: int, y_center: int, box: bool = True) -> Image.Image:
+def caption_png(text: str, font_path: str, size: int, y_center: int, box: bool = True,
+                style: str = "light") -> Image.Image:
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     font = ImageFont.truetype(font_path, size)
     text = clean_caption(text)
-    lines = _wrap(text, font, W - 140)
+    lines = _wrap(text, font, W - 160)
     lh = int(size * 1.28)
     total = lh * len(lines)
     y = y_center - total // 2
-    d = ImageDraw.Draw(layer)
+    box_color = STYLES[style][0]
     if box and lines:
-        widths = [font.getlength("".join(s for s, _, _ in _segments(l))) for l in lines]
-        bw = max(widths) + 80
-        d.rounded_rectangle([(W - bw) / 2, y - 30, (W + bw) / 2, y + total + 20], 28, fill=(0, 0, 0, 150))
-    stroke = max(4, size // 12)
+        widths = [font.getlength("".join(s for s, _, _ in _segments(l, style))) for l in lines]
+        bw = max(widths) + 90
+        rect = [(W - bw) / 2, y - 34, (W + bw) / 2, y + total + 22]
+        if style != "dark":  # 스티커처럼 살짝 그림자
+            sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            ImageDraw.Draw(sh).rounded_rectangle([rect[0], rect[1] + 12, rect[2], rect[3] + 12], 34,
+                                                 fill=(0, 0, 0, 90))
+            layer.alpha_composite(sh.filter(ImageFilter.GaussianBlur(10)))
+        ImageDraw.Draw(layer).rounded_rectangle(rect, 34, fill=box_color)
+    d = ImageDraw.Draw(layer)
+    stroke = max(4, size // 12) if style == "dark" else 0
     for ln in lines:
-        segs = list(_segments(ln))
+        segs = list(_segments(ln, style))
         lw = sum(font.getlength(s) for s, _, _ in segs)
         x = (W - lw) / 2
         for s, color, strike in segs:
@@ -211,7 +229,7 @@ def caption_png(text: str, font_path: str, size: int, y_center: int, box: bool =
             sw = font.getlength(s)
             if strike:
                 my = y + size * 0.6
-                d.line([x, my, x + sw, my], fill=(255, 70, 70), width=max(4, size // 14))
+                d.line([x, my, x + sw, my], fill=(232, 38, 43), width=max(4, size // 14))
             x += sw
         y += lh
     return layer
@@ -224,7 +242,7 @@ def badge_png(text: str, font_path: str) -> Image.Image:
     tw = font.getlength(text)
     d = ImageDraw.Draw(layer)
     x0 = (W - tw) / 2 - 36
-    d.rounded_rectangle([x0, 150, x0 + tw + 72, 250], 50, fill=(255, 59, 48, 235))
+    d.rounded_rectangle([x0, 150, x0 + tw + 72, 250], 50, fill=(232, 38, 43, 240))
     d.text(((W - tw) / 2, 164), text, font=font, fill=WHITE)
     return layer
 

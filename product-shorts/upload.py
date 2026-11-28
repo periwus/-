@@ -27,7 +27,8 @@ def main():
     if a.comments_only:
         try:
             yt = youtube.get_service(a.client_secret, a.token)
-        except FileNotFoundError as e:
+            youtube.check_channel(yt, youtube.expected_channel(a))
+        except (FileNotFoundError, ValueError) as e:
             sys.exit(f"오류: {e}")
         for f in folders:
             if (f / "upload_result.json").exists():

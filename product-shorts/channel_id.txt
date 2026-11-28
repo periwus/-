@@ -1,0 +1,2 @@
+UCgS9CvAWlfMSvVi4Jkn4Bnw
+# 업로드할 채널 ID (살림픽 @살림픽tv). 다른 채널로 올리면 업로드가 중단됩니다.

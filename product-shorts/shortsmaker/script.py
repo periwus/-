@@ -37,44 +37,74 @@ class Script:
 
 
 # ---------------------------------------------------------------- 템플릿 대본
-HOOKS = [
-    "아직도 {pain} 때문에 고생하세요?",
-    "{target} 이거 모르면 진짜 손해예요",
-    "이거 하나로 {pain} 끝났습니다",
-    "솔직히 {price}원에 이게 된다고요?",
-    "요즘 {target} 사이에서 난리 난 물건",
+# 원칙: 불편한 상황으로 시작, 낚시·과장 문구 금지, 15~25초, 영상마다 문장 구성이 달라지게.
+HOOKS_PAIN = [
+    "{pain} 때문에 고민이라면 보세요",
+    "{pain}, 이렇게 해결할 수 있어요",
+    "{pain} 신경 쓰이는 집이라면",
+    "겨울마다 {pain} 겪는 집이라면",
 ]
+HOOKS_TARGET = ["{target}{iramyeon} 한 번쯤 겪는 {pain}"]
+HOOKS_PLAIN = ["{short} 실제로 쓰는 모습이에요", "{short}, 어떻게 쓰는지 보여드릴게요"]
+CONNECT = [["", "그리고 ", "또 "], ["", "게다가 ", "마지막으로 "], ["", "", ""]]
+SEASON_WORDS = ("외풍", "결로", "추위", "난방", "보온", "방한", "냉기", "웃풍", "우풍", "성에")
+
+
+def _has_batchim(word: str) -> bool:
+    ch = word.strip()[-1:] if word.strip() else ""
+    return bool(ch) and "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 != 0
+
+
+def _josa(word: str, with_b: str, without_b: str) -> str:
+    return word + (with_b if _has_batchim(word) else without_b)
 
 
 def template_script(p: Product, seed: int | None = None) -> Script:
     rnd = random.Random(seed if seed is not None else p.name)
-    n_img = max(1, len(p.media))
-    pain = p.pain or "매일 하는 이 불편함"
-    target = p.target or "자취생"
-    hooks = [h for h in HOOKS if ("{price}" not in h or p.price)]
-    hook = rnd.choice(hooks).format(pain=pain, target=target, price=p.price)
+    n = max(1, len(p.media))
+    short = _short(p.name)
+    pain, target = p.pain.strip(), p.target.strip()
 
-    scenes = [Scene("hook", hook, _emph(hook, [pain, target, p.price]), 0)]
-    if p.pain:
-        t = f"매번 {p.pain}, 진짜 스트레스잖아요."
-        scenes.append(Scene("problem", t, f"매번 **{p.pain}**…", 1 % n_img))
-    scenes.append(Scene("feature", f"그래서 찾은 게 바로 {p.name}입니다.", f"그래서 찾은 **{_short(p.name)}**", 0))
-    for i, f in enumerate(p.features[:4]):
-        lead = ["첫째,", "둘째,", "셋째,", "그리고"][i]
-        scenes.append(Scene("feature", f"{lead} {f}.", f"{f}", (i + 1) % n_img))
+    if pain:
+        pool = list(HOOKS_PAIN)
+        if not any(w in pain for w in SEASON_WORDS):
+            pool.remove("겨울마다 {pain} 겪는 집이라면")
+        if target:
+            pool += HOOKS_TARGET
+        hook = rnd.choice(pool).format(pain=pain, target=target, short=short,
+                                       iramyeon="이라면" if _has_batchim(target) else "라면")
+    else:
+        hook = rnd.choice(HOOKS_PLAIN).format(short=short)
+    scenes = [Scene("hook", hook, _emph(hook, [pain, short]), 0)]
+
+    # 사용 장면: 장점 최대 3개, 첫 장면에서 제품 이름을 함께 말한다
+    conn = rnd.choice(CONNECT)
+    for i, f in enumerate(p.features[:3]):
+        if i == 0:
+            t = f"{_josa(short, '은', '는')} {f}."
+            c = f"**{short}**\n{f}"
+        else:
+            t = f"{conn[i]}{f}."
+            c = f
+        scenes.append(Scene("feature", t, c, (i + 1) % n))
+
+    # 마무리: 가격 + 프로필 링크 안내를 한 장면에
+    cta = p.cta_text
+    cta_say = f"제품 정보는 {cta}에 있어요." if cta.startswith("프로필 링크") else f"{cta}."
     if p.price:
         dr = p.discount_rate()
         if dr:
-            t = f"정가 {p.original_price}원인데 지금은 {dr}% 할인해서 {p.price}원이에요."
-            c = f"~~{p.original_price}원~~\n**{dr}% 할인 {p.price}원**"
+            t = f"지금 {dr}% 할인해서 {p.price}원이에요. {cta_say}"
+            c = f"~~{p.original_price}원~~ **{p.price}원**\n{_emph(cta, [cta])}"
         else:
-            t = f"가격도 {p.price}원이면 충분해요."
-            c = f"단돈 **{p.price}원**"
+            t = f"가격은 {p.price}원이에요. {cta_say}"
+            c = f"**{p.price}원**\n{cta}"
         scenes.append(Scene("price", t, c, 0))
-    scenes.append(Scene("cta", f"자세한 건 {p.cta}.", f"**{p.cta}**", 0))
+    else:
+        scenes.append(Scene("cta", cta_say, f"**{cta}**", 0))
 
-    title = f"{hook} | {_short(p.name)}"[:95]
-    tags = ["#쇼츠", "#추천템", "#꿀템", f"#{_tag(p.name)}"] + ([f"#{_tag(target)}템"] if target else [])
+    title = f"{hook} | {short}"[:95]
+    tags = ["#살림템", "#생활꿀템", f"#{_tag(p.name)}"] + ([f"#{_tag(target)}템"] if target else [])
     desc = f"{p.name}\n" + "".join(f"- {f}\n" for f in p.features)
     return Script(title, scenes, tags, desc)
 
@@ -103,16 +133,21 @@ def _emph(text: str, words: list[str]) -> str:
 
 
 # ---------------------------------------------------------------- Claude 대본
-SYSTEM = """너는 조회수 높은 한국 상품 쇼츠(유튜브 쇼츠·릴스·틱톡) 대본 작가다.
+SYSTEM = """너는 한국 생활용품 쇼츠(유튜브 쇼츠·릴스) 대본 작가다. 채널은 YPP 심사에서
+'오해 소지가 있는 제목'과 '반복 콘텐츠'로 거절된 적이 있으니 정직하고 영상마다 다르게 쓴다.
 규칙:
-- 전체 낭독 25~40초. 장면 5~8개, 장면당 낭독 1~2문장(짧고 구어체).
-- 1장면은 첫 3초 후킹: 불편 공감, 반전, 가격 충격, 타깃 호명 중 하나.
-- 흐름: hook → problem(선택) → feature(제품 소개+핵심 기능 2~4개) → price(가격이 있으면) → cta.
+- 전체 낭독 15~25초. 장면 4~5개, 장면당 낭독 1문장(짧은 구어체).
+- 1장면(hook)은 시청자가 겪는 불편한 상황으로 시작한다. 예: "창문 틈으로 찬바람 들어오는 집이라면".
+- 흐름: hook → feature 2~3개(첫 feature에서 제품 이름을 말함) → price(가격이 있으면) 또는 cta.
+- 마지막 장면 낭독은 반드시 cta_text를 안내한다. 예: "제품 정보는 프로필 링크 3번에 있어요."
+  설명란·댓글 링크로 안내하지 마라(쇼츠에서는 눌리지 않는다).
 - caption은 화면 자막: 12자 안팎 한두 줄, 핵심 단어는 **두 별표**로 감싼다. 할인 전 가격은 ~~물결~~로 감싸면 취소선이 된다. 줄바꿈은 \\n. 이모지·특수기호(✔↓👇 등)는 쓰지 마라.
-- 상품 정보에 없는 효능·수치·후기·인증을 지어내지 마라. 과장 광고 표현(최고, 100%, 완치 등) 금지.
+- 금지: 상품 정보에 없는 효능·수치·후기·인증·사연, "보일러보다 따뜻", "난방비 X% 절약", "이거 모르면 손해",
+  "난리 난", "역대급", "최고", "100%" 같은 과장·낚시 표현, 가격 충격형 후킹.
 - image는 0부터 시작하는 소재 번호(media 목록 길이 미만). media에서 "video"는 상품 영상 클립이니
   후킹·사용 장면에 우선 배치하고, 가격·CTA 장면에는 "image"를 쓰는 편이 좋다.
-- title은 60자 이내 후킹 제목, hashtags는 5~8개(#포함), description은 2~4줄 상품 설명."""
+- title은 영상 내용과 정확히 맞는 50자 이내 제목(낚시 금지), hashtags는 4~6개(#포함), description은 2~4줄 상품 설명."""
+
 
 SCHEMA = {
     "type": "object",
@@ -145,6 +180,7 @@ def ai_script(p: Product, model: str = "claude-opus-5-5", style: str = "") -> Sc
 
     client = anthropic.Anthropic()
     info = {k: v for k, v in p.to_dict().items() if k not in ("images", "clips", "affiliate") and v}
+    info["cta_text"] = p.cta_text
     info["media"] = ["video" if i < len(p.clips) else "image" for i in range(max(1, len(p.media)))]
     prompt = "다음 상품으로 쇼츠 대본을 써줘.\n" + json.dumps(info, ensure_ascii=False, indent=2)
     if style:

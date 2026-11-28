@@ -14,22 +14,27 @@ from .script import Script, make_script
 COUPANG_NOTICE = "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
 
 
+def _short_name(name: str, n: int = 30) -> str:
+    return name if len(name) <= n else name[:n].rstrip()
+
+
 def slug(s: str) -> str:
     s = re.sub(r"[^\w가-힣]+", "_", s).strip("_")
     return s[:40] or "product"
 
 
 def pinned_comment(p: Product) -> str:
-    pin = f"👉 {p.name} 구매 링크: {p.link}" if p.link else f"👉 {p.name} 정보는 프로필 링크에서!"
+    """선택용 댓글. 쇼츠 댓글 링크는 눌리지 않고 스팸으로 걸러지기 쉬워 링크 대신 번호로 안내한다."""
+    pin = f"📌 {p.name} 정보는 채널 {p.cta_text}에 있어요."
     if p.is_affiliate:
         pin += f"\n({COUPANG_NOTICE})"
     return pin
 
 
 def full_description(p: Product, s: Script) -> str:
-    lines = [s.description.strip()]
+    lines = [s.description.strip(), "", f"📌 제품 정보: 채널 {p.cta_text}"]
     if p.link:
-        lines += ["", f"👉 구매 링크: {p.link}"]
+        lines += [f"👉 {p.link}"]
     if p.is_affiliate:
         lines += ["", COUPANG_NOTICE]
     lines += ["", " ".join(s.hashtags)]
@@ -44,17 +49,12 @@ def upload_meta(p: Product, s: Script, video: Path) -> dict:
 
 
 def upload_text(p: Product, s: Script) -> str:
-    desc = s.description.strip()
-    lines = [f"[제목]\n{s.title}", "", "[설명]", desc]
+    lines = [f"[제목]\n{s.title}", "", "[설명]", full_description(p, s)]
     if p.link:
-        lines += ["", f"👉 구매 링크: {p.link}"]
-    if p.is_affiliate:
-        lines += ["", COUPANG_NOTICE]
-    lines += ["", " ".join(s.hashtags), "", "[고정 댓글]"]
-    pin = f"👉 {p.name} 구매 링크: {p.link}" if p.link else f"👉 {p.name} 정보는 프로필 링크에서!"
-    if p.is_affiliate:
-        pin += f"\n({COUPANG_NOTICE})"
-    lines.append(pin)
+        lines += ["", "[채널 프로필 링크에 넣을 것]",
+                  f"제목: {p.link_no + '번 ' if p.link_no else ''}{_short_name(p.name)}"
+                  f"{' (쿠팡 파트너스)' if p.is_affiliate else ''}", f"URL: {p.link}"]
+    lines += ["", "[댓글 (선택)]", pinned_comment(p)]
     return "\n".join(lines) + "\n"
 
 
@@ -91,11 +91,11 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
         # 자막 레이어
         layer = Image.new("RGBA", (render.W, render.H), (0, 0, 0, 0))
         if sc.kind == "hook":
-            layer.alpha_composite(render.caption_png(sc.caption, font, 96, 1430))
+            layer.alpha_composite(render.caption_png(sc.caption, font, 92, 1430, style="hook"))
         elif sc.kind == "price":
-            layer.alpha_composite(render.caption_png(sc.caption, font, 104, 1450))
+            layer.alpha_composite(render.caption_png(sc.caption, font, 92, 1450))
         else:
-            layer.alpha_composite(render.caption_png(sc.caption, font, 78, 1480))
+            layer.alpha_composite(render.caption_png(sc.caption, font, 76, 1480))
         if badge_text and sc.kind != "hook":
             layer.alpha_composite(render.badge_png(badge_text, font))
         ov = work / f"overlay_{i}.png"
@@ -120,13 +120,15 @@ def make_short(p: Product, out_root: Path, font: str, *, ai="auto", model="claud
     # 썸네일
     thumb = render.scene_canvas(media[0].frame(), scale=1).convert("RGBA")
     first = script.scenes[0].caption
-    thumb.alpha_composite(render.caption_png(first, font, 116, 1560))
+    thumb.alpha_composite(render.caption_png(first, font, 112, 1560, style="hook"))
     thumb.convert("RGB").save(out / "thumbnail.jpg", quality=92)
 
     (out / "upload.txt").write_text(upload_text(p, script), encoding="utf-8")
     (out / "upload.json").write_text(json.dumps(upload_meta(p, script, video), ensure_ascii=False, indent=2),
                                      encoding="utf-8")
     print(f"  ✔ {video}  ({total:.1f}초{'' if voiced else ', 무음: TTS 연결 실패'})")
-    if total > 60:
-        print("  ! 60초를 넘었습니다. 쇼츠는 짧을수록 유리하니 기능 수를 줄여보세요.")
+    if total > 25:
+        print(f"  ! {total:.0f}초: 목표(15~25초)보다 깁니다. 장점 문장을 줄이거나 script.json을 다듬어 보세요.")
+    if not p.link_no:
+        print("  ! link_no(프로필 링크 번호)가 없어 '프로필 링크'로만 안내합니다.")
     return video

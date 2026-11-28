@@ -25,7 +25,8 @@ class Product:
     link: str = ""                  # 구매/제휴 링크
     pain: str = ""                  # 고객이 겪는 불편 ("욕실 물때")
     target: str = ""                # 타깃 ("자취생")
-    cta: str = "고정댓글 링크에서 확인하세요"
+    link_no: str = ""               # 채널 프로필 링크 번호 ("1" → "프로필 링크 1번")
+    cta: str = ""                   # 비우면 프로필 링크 번호로 자동 생성
     description: str = ""
     affiliate: bool | None = None   # None이면 링크로 자동 판단(쿠팡)
 
@@ -34,6 +35,13 @@ class Product:
         if self.affiliate is not None:
             return self.affiliate
         return "coupang" in self.link or "link.coupang" in self.link
+
+    @property
+    def cta_text(self) -> str:
+        """영상 끝 안내. 쇼츠 설명란·댓글 링크는 눌리지 않아서 프로필 링크로 안내한다."""
+        if self.cta:
+            return self.cta
+        return f"프로필 링크 {self.link_no}번" if self.link_no else "프로필 링크"
 
     @property
     def media(self) -> list[str]:
@@ -82,6 +90,8 @@ def from_dict(d: dict, base_dir: Path | None = None) -> Product:
     clips += [i for i in imgs if is_video(i)]
     data["images"] = [i for i in imgs if not is_video(i)]
     data["clips"] = clips
+    if data.get("link_no") not in (None, ""):
+        data["link_no"] = str(_num(str(data["link_no"])) or data["link_no"])
     for k in ("price", "original_price"):
         if data.get(k) not in (None, ""):
             n = _num(str(data[k]))
